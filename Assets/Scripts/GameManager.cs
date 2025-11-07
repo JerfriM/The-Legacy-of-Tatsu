@@ -31,11 +31,9 @@ public class GameManager : MonoBehaviour
     // REFERENCIAS DE ESCENA (ASIGNAR EN INSPECTOR)
     // ==========================================================
     [Header("Nombres de Escena")]
-    public string levelPrefix = "Level_";
+    public string levelPrefix = "Level_"; // Ejemplo: "Level_01"
     public string menuSceneName = "MainMenu";
 
-    // NOTA: Estas variables ya no se usan en la lógica de carga secuencial,
-    // pero se mantienen para referencias visuales en el Inspector.
     public string level1SceneName = "Level_01";
     public string level10SceneName = "Level_10";
 
@@ -43,6 +41,7 @@ public class GameManager : MonoBehaviour
     // REFERENCIAS DE UI (ASIGNAR EN EL INSPECTOR)
     // ==========================================================
     [Header("UI Referencias")]
+    // Estas variables se asignan automáticamente en cada escena (ver FindAndConnectUI)
     public TextMeshProUGUI livesText;
     public TextMeshProUGUI coinsText;
 
@@ -81,12 +80,12 @@ public class GameManager : MonoBehaviour
     // ==========================================================
 
     /// <summary>
-    /// Llamada por el botón 'Play'. Resetea todo.
+    /// Llamada por el botón 'Play'. Resetea todo e inicia el juego.
     /// </summary>
     public void StartGame()
     {
-        ResetStats(); // Resetea Vidas y Monedas
-        savedCheckpointIndex = 0; // Borra el checkpoint al iniciar un juego nuevo
+        ResetStats();
+        savedCheckpointIndex = 0;
         currentLevelIndex = 1;
         Time.timeScale = 1f;
 
@@ -99,7 +98,7 @@ public class GameManager : MonoBehaviour
     /// </summary>
     public void AdvanceLevel()
     {
-        // ⭐ Verifica si el nivel que acabamos de completar es un checkpoint (3, 6, o 9)
+        // Verifica si el nivel que acabamos de completar es un checkpoint (3, 6, o 9)
         if (checkpointLevels.Contains(currentLevelIndex))
         {
             savedCheckpointIndex = currentLevelIndex;
@@ -122,7 +121,6 @@ public class GameManager : MonoBehaviour
     // Método auxiliar para construir el nombre de la escena y cargarla
     void LoadLevel(int level)
     {
-        // Usa el formato de dos dígitos (01, 02, ... 10)
         string sceneName = levelPrefix + level.ToString("00");
         Debug.Log($"GameManager: Llamando a SceneManager.LoadScene('{sceneName}')");
         SceneManager.LoadScene(sceneName);
@@ -147,7 +145,7 @@ public class GameManager : MonoBehaviour
 
         if (currentLives <= 0)
         {
-            StartCoroutine(HandleGameOver()); // Game Over, ir al menú
+            StartCoroutine(HandleGameOver()); // Game Over
         }
         else
         {
@@ -166,7 +164,6 @@ public class GameManager : MonoBehaviour
         // Determina el nivel de reinicio: si hay checkpoint (3, 6, 9), úsalo; si no, usa el Nivel 1.
         int restartLevel = (savedCheckpointIndex > 0) ? savedCheckpointIndex : 1;
 
-        // Establece el índice del nivel actual al nivel de reinicio
         currentLevelIndex = restartLevel;
 
         Debug.Log($"GameManager: Muerte. Reiniciando en Level_{restartLevel.ToString("00")} con {currentLives} vidas restantes.");
@@ -184,18 +181,16 @@ public class GameManager : MonoBehaviour
     }
 
     // ==========================================================
-    // LÓGICA AUXILIAR Y MONEDAS (FIX para error CS1061)
+    // LÓGICA AUXILIAR Y UI
     // ==========================================================
 
     /// <summary>
-    /// Suma monedas al contador y verifica si el jugador gana una vida extra.
-    /// FIX para el error CS1061 en Coin.cs
+    /// Suma monedas al contador. (Arregla el error CS1061)
     /// </summary>
     public void CollectCoin(int amount)
     {
         currentCoins += amount;
 
-        // Lógica para dar vida extra (si aplicas esta regla)
         if (currentCoins >= COINS_FOR_EXTRA_LIFE)
         {
             currentCoins -= COINS_FOR_EXTRA_LIFE;
@@ -203,21 +198,19 @@ public class GameManager : MonoBehaviour
             Debug.Log("GameManager: ¡Vida extra obtenida!");
         }
 
-        UpdateUI(); // Llama a la función que actualiza los TextMeshProUGUI
+        UpdateUI();
     }
 
-    IEnumerator ShowVictoryScreen()
-    {
-        // Lógica de victoria, puedes mostrar victoryText aquí.
-        yield break;
-    }
+    IEnumerator ShowVictoryScreen() { yield break; }
 
     public void ResetStats() { currentLives = 3; currentCoins = 0; UpdateUI(); }
     void ResetGame() { ResetStats(); savedCheckpointIndex = 0; currentLevelIndex = 0; }
 
+    /// <summary>
+    /// Actualiza el texto de Vidas y Monedas en la UI.
+    /// </summary>
     void UpdateUI()
     {
-        // Actualiza el texto de Vidas y Monedas
         if (livesText != null)
             livesText.text = "VIDAS: " + currentLives;
 
@@ -225,8 +218,47 @@ public class GameManager : MonoBehaviour
             coinsText.text = "MONEDAS: " + currentCoins;
     }
 
-    // Lógica para reconexión de UI al cargar una escena (crucial para Singletong)
+    // ==========================================================
+    // RECONEXIÓN DE UI ENTRE ESCENAS
+    // ==========================================================
+
     void OnEnable() { SceneManager.sceneLoaded += OnSceneLoaded; }
     void OnDisable() { SceneManager.sceneLoaded -= OnSceneLoaded; }
-    private void OnSceneLoaded(Scene scene, LoadSceneMode mode) { UpdateUI(); }
+
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        FindAndConnectUI(); // Busca los nuevos textos de UI en la escena
+        UpdateUI(); // Actualiza el texto con los valores actuales (vidas, monedas)
+    }
+
+    /// <summary>
+    /// Busca los TextMeshProUGUI en la escena recién cargada y los asigna a las variables del GameManager.
+    /// REQUIERE que los objetos de texto en la jerarquía se llamen 'LivesText' y 'CoinsText'.
+    /// </summary>
+    private void FindAndConnectUI()
+    {
+        // Solo necesitamos reconectar la UI en las escenas de juego.
+        if (SceneManager.GetActiveScene().name != menuSceneName)
+        {
+            // Si las referencias están nulas, intentamos encontrarlas
+            if (livesText == null || coinsText == null)
+            {
+                // Busca TODOS los componentes TextMeshProUGUI en la escena
+                TextMeshProUGUI[] texts = FindObjectsOfType<TextMeshProUGUI>();
+
+                foreach (var textComponent in texts)
+                {
+                    // CRÍTICO: El nombre del objeto en la Jerarquía debe coincidir
+                    if (textComponent.gameObject.name == "LivesText")
+                    {
+                        livesText = textComponent;
+                    }
+                    if (textComponent.gameObject.name == "CoinsText")
+                    {
+                        coinsText = textComponent;
+                    }
+                }
+            }
+        }
+    }
 }
