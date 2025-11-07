@@ -1,0 +1,32 @@
+# Ignorar carpetas generadas y grandes archivos binarios
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[L]ogs/
+
+# Archivos de configuracion del IDE (Visual Studio, Rider, etc.)
+*.csproj
+*.unityproj
+*.sln
+*.userprefs
+.vs/
+.vscode/
+.idea/
+
+# Archivos temporales varios
+*.pidb
+*.suo
+*.user
+*.bak
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# Ignorar archivos de cache del sistema operativo
+!/[Aa]ssets/**/Thumbs.db
+!/[Aa]ssets/**/.DS_Store
